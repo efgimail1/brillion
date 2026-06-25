@@ -1,0 +1,30 @@
+Menjalankan seed.py
+
+cd backend
+uv run python seed.py
+
+cd frontend
+npm run dev
+
+cd backend
+uv run uvicorn app.main:app --reload --port 8080  
+
+
+Blu Spending
+    - Blu Account
+    - Living Cost
+Blu Saving
+    - Dana Darurat
+    - HP 200
+    - VanCation
+    - Holiday/Staycation 200
+    - Cobi Endap 2jt
+    - Medic 300
+    - Beauty 150
+    - RF Design n Build
+    - Bisnis RaRe 10prs
+    - Bisnis GorGym 150
+
+
+Apa maksud dari tipe rekening utama, kantong, dan deposito
+
