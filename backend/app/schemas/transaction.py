@@ -7,6 +7,7 @@ class TransactionBase(BaseModel):
     account_id: UUID
     category_id: UUID | None = None
     project_id: UUID | None = None
+    to_account_id: UUID | None = None
     type: str                       # "income", "expense", "transfer"
     amount: Decimal
     description: str | None = None
@@ -22,6 +23,7 @@ class TransactionCreate(TransactionBase):
 class TransactionUpdate(BaseModel):
     category_id: UUID | None = None
     project_id: UUID | None = None
+    to_account_id: UUID | None = None
     description: str | None = None
     notes: str | None = None
     from_to: str | None = None

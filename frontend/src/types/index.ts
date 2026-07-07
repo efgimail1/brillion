@@ -44,6 +44,7 @@ export interface Project {
 export interface Transaction {
   id: string
   account_id: string
+  to_account_id?: string
   category_id?: string
   project_id?: string
   type: 'income' | 'expense' | 'transfer'

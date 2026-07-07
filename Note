@@ -28,3 +28,5 @@ Blu Saving
 
 Apa maksud dari tipe rekening utama, kantong, dan deposito
 
+INSERT INTO categories (id, name, type, fund_type, color, created_at)
+VALUES (gen_random_uuid(), 'Biaya Operasional', 'expense', 'tpp', '#534AB7', now());

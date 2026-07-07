@@ -12,6 +12,7 @@ class Transaction(Base):
     account_id       = Column(UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=False)
     category_id      = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
     project_id       = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True)  # null = bukan uang project
+    to_account_id    = Column(UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=True)
 
     type             = Column(String(10), nullable=False)   # "income", "expense", "transfer"
     amount           = Column(Numeric(18, 2), nullable=False)
@@ -24,6 +25,6 @@ class Transaction(Base):
     created_at       = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at       = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
 
-    account          = relationship("Account", back_populates="transactions")
+    account          = relationship("Account",back_populates="transactions",foreign_keys="[Transaction.account_id]")
     category         = relationship("Category", back_populates="transactions")
     project          = relationship("Project", back_populates="transactions")

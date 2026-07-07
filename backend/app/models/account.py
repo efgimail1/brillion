@@ -22,5 +22,5 @@ class Account(Base):
 
     bank              = relationship("Bank", back_populates="accounts")
     parent            = relationship("Account", remote_side="Account.id", backref="pockets")
-    transactions      = relationship("Transaction", back_populates="account")
+    transactions      = relationship("Transaction",back_populates="account",foreign_keys="Transaction.account_id")
     monthly_balances  = relationship("MonthlyBalance", back_populates="account")

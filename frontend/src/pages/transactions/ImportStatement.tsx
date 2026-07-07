@@ -14,6 +14,8 @@ interface RowState extends ParsedTransaction {
   project_id: string;
   is_transfer: boolean;
   to_account_id: string;
+  notes: string;
+  _showNotes: boolean; // ← tambah
 }
 
 export default function ImportStatement() {
@@ -124,6 +126,8 @@ export default function ImportStatement() {
           project_id: "",
           is_transfer: autoIsTransfer,
           to_account_id: matchedPocketId,
+          notes: "",
+          _showNotes: false, // ← tambah
         };
       });
       setRows(initialRows);
@@ -173,6 +177,7 @@ export default function ImportStatement() {
         type: row.is_transfer ? "transfer" : row.type,
         amount: row.amount,
         description: row.description || undefined,
+        notes: row.notes || undefined,
         from_to: row.from_to || undefined,
         fund_type: row.fund_type,
         transaction_date: row.date ?? new Date().toISOString().split("T")[0],
@@ -401,6 +406,7 @@ export default function ImportStatement() {
                   <th className="text-left px-3 py-2 w-40">Project</th>
                   <th className="text-left px-3 py-2 w-10">Transfer</th>
                   <th className="text-left px-3 py-2 w-40">Ke rekening</th>
+                  <th className="px-3 py-2 w-10">📝</th>
                 </tr>
               </thead>
               <tbody>
@@ -412,158 +418,212 @@ export default function ImportStatement() {
                   );
 
                   return (
-                    <tr
-                      key={i}
-                      className={`border-b border-gray-50 ${!row.included ? "opacity-40" : ""}`}
-                    >
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={row.included}
-                          onChange={(e) =>
-                            updateRow(i, { included: e.target.checked })
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-500 whitespace-nowrap text-xs">
-                        {row.day.toString().padStart(2, "0")}/
-                        {row.month.toString().padStart(2, "0")}
-                      </td>
-                      <td className="px-3 py-2">
-                        <p
-                          className="text-gray-700 truncate max-w-xs text-xs"
-                          title={row.description}
-                        >
-                          {row.description}
-                        </p>
-                        {row.from_to && (
-                          <p className="text-xs text-gray-400 truncate max-w-xs">
-                            {row.from_to}
-                          </p>
-                        )}
-                        {row.is_transfer && row.to_account_id && (
-                          <span className="inline-block mt-0.5 text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">
-                            auto: transfer kantong
-                          </span>
-                        )}
-                        {row.is_likely_internal_transfer &&
-                          !row.to_account_id && (
-                            <span className="inline-block mt-0.5 text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">
-                              kemungkinan transfer — pocket "
-                              {row.internal_pocket_hint}" tidak ditemukan
+                    <>
+                      <tr
+                        key={`row-${i}`}
+                        className={`border-b border-gray-50 ${!row.included ? "opacity-40" : ""}`}
+                      >
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={row.included}
+                            onChange={(e) =>
+                              updateRow(i, { included: e.target.checked })
+                            }
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-gray-500 whitespace-nowrap text-xs">
+                          {row.day.toString().padStart(2, "0")}/
+                          {row.month.toString().padStart(2, "0")}
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="text"
+                            value={row.description}
+                            onChange={(e) =>
+                              updateRow(i, { description: e.target.value })
+                            }
+                            className="w-full text-xs px-2 py-1 border border-transparent rounded hover:border-gray-200 focus:border-indigo-300 focus:outline-none bg-transparent focus:bg-white transition-colors"
+                            placeholder="Keterangan..."
+                          />
+                          {row.from_to && (
+                            <p className="text-xs text-gray-400 truncate px-2">
+                              {row.from_to}
+                            </p>
+                          )}
+                          {row.is_transfer && row.to_account_id && (
+                            <span className="inline-block mt-0.5 ml-1 text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">
+                              auto: transfer kantong
                             </span>
                           )}
-                      </td>
-                      <td
-                        className={`px-3 py-2 text-right font-medium tabular-nums text-xs
-                        ${row.type === "income" ? "text-green-600" : "text-red-500"}`}
-                      >
-                        {row.type === "income" ? "+" : "−"}
-                        {formatRupiah(row.amount)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <select
-                          value={row.fund_type}
-                          onChange={(e) =>
-                            updateRow(i, {
-                              fund_type: e.target.value,
-                              category_id: "",
-                            })
-                          }
-                          disabled={row.is_transfer}
-                          className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white disabled:bg-gray-50"
+                          {row.is_likely_internal_transfer &&
+                            !row.to_account_id && (
+                              <span className="inline-block mt-0.5 ml-1 text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">
+                                kemungkinan transfer — "
+                                {row.internal_pocket_hint}"
+                              </span>
+                            )}
+                          {row.notes && (
+                            <p className="text-xs text-indigo-500 mt-0.5 italic px-2">
+                              📝 {row.notes}
+                            </p>
+                          )}
+                        </td>
+                        <td
+                          className={`px-3 py-2 text-right font-medium tabular-nums text-xs
+          ${row.type === "income" ? "text-green-600" : "text-red-500"}`}
                         >
-                          {FUND_TYPES.map((ft) => (
-                            <option key={ft.value} value={ft.value}>
-                              {ft.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-2">
-                        <select
-                          value={row.category_id}
-                          onChange={(e) =>
-                            updateRow(i, { category_id: e.target.value })
-                          }
-                          disabled={row.is_transfer}
-                          className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white disabled:bg-gray-50"
-                        >
-                          <option value="">Pilih kategori...</option>
-                          {filteredCategories?.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-2">
-                        {row.fund_type === "project" && !row.is_transfer ? (
+                          {row.type === "income" ? "+" : "−"}
+                          {formatRupiah(row.amount)}
+                        </td>
+                        <td className="px-3 py-2">
                           <select
-                            value={row.project_id}
+                            value={row.fund_type}
                             onChange={(e) =>
-                              updateRow(i, { project_id: e.target.value })
+                              updateRow(i, {
+                                fund_type: e.target.value,
+                                category_id: "",
+                              })
                             }
-                            className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white"
+                            disabled={row.is_transfer}
+                            className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white disabled:bg-gray-50"
                           >
-                            <option value="">Pilih project...</option>
-                            {projects?.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
+                            {FUND_TYPES.map((ft) => (
+                              <option key={ft.value} value={ft.value}>
+                                {ft.label}
                               </option>
                             ))}
                           </select>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={row.is_transfer}
-                          onChange={(e) =>
-                            updateRow(i, {
-                              is_transfer: e.target.checked,
-                              category_id: e.target.checked
-                                ? ""
-                                : row.category_id,
-                              project_id: e.target.checked
-                                ? ""
-                                : row.project_id,
-                            })
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        {row.is_transfer ? (
+                        </td>
+                        <td className="px-3 py-2">
                           <select
-                            value={row.to_account_id}
+                            value={row.category_id}
                             onChange={(e) =>
-                              updateRow(i, { to_account_id: e.target.value })
+                              updateRow(i, { category_id: e.target.value })
                             }
-                            className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white"
+                            disabled={row.is_transfer}
+                            className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white disabled:bg-gray-50"
                           >
-                            <option value="">Pilih tujuan...</option>
-                            {mainAccounts
-                              .filter((a) => a.id !== accountId)
-                              .map((acc) => (
-                                <option key={acc.id} value={acc.id}>
-                                  {acc.name}
-                                </option>
-                              ))}
-                            {(accounts ?? [])
-                              .filter((a) => a.is_pocket && a.id !== accountId)
-                              .map((acc) => (
-                                <option key={acc.id} value={acc.id}>
-                                  ↳ {acc.name}
-                                </option>
-                              ))}
+                            <option value="">Pilih kategori...</option>
+                            {filteredCategories?.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
                           </select>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-3 py-2">
+                          {row.fund_type === "project" && !row.is_transfer ? (
+                            <select
+                              value={row.project_id}
+                              onChange={(e) =>
+                                updateRow(i, { project_id: e.target.value })
+                              }
+                              className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white"
+                            >
+                              <option value="">Pilih project...</option>
+                              {projects?.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={row.is_transfer}
+                            onChange={(e) =>
+                              updateRow(i, {
+                                is_transfer: e.target.checked,
+                                category_id: e.target.checked
+                                  ? ""
+                                  : row.category_id,
+                                project_id: e.target.checked
+                                  ? ""
+                                  : row.project_id,
+                              })
+                            }
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          {row.is_transfer ? (
+                            <select
+                              value={row.to_account_id}
+                              onChange={(e) =>
+                                updateRow(i, { to_account_id: e.target.value })
+                              }
+                              className="w-full text-xs px-2 py-1 border border-gray-200 rounded bg-white"
+                            >
+                              <option value="">Pilih tujuan...</option>
+                              {mainAccounts
+                                .filter((a) => a.id !== accountId)
+                                .map((acc) => (
+                                  <option key={acc.id} value={acc.id}>
+                                    {acc.name}
+                                  </option>
+                                ))}
+                              {(accounts ?? [])
+                                .filter(
+                                  (a) => a.is_pocket && a.id !== accountId,
+                                )
+                                .map((acc) => (
+                                  <option key={acc.id} value={acc.id}>
+                                    ↳ {acc.name}
+                                  </option>
+                                ))}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                        </td>
+                        {/* Tombol tambah catatan */}
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            onClick={() =>
+                              updateRow(i, {
+                                _showNotes: !row._showNotes,
+                              } as Partial<RowState>)
+                            }
+                            className={`text-xs px-1.5 py-1 rounded transition-colors
+              ${
+                row.notes || row._showNotes
+                  ? "text-indigo-600 bg-indigo-50"
+                  : "text-gray-300 hover:text-gray-500 hover:bg-gray-50"
+              }`}
+                            title="Tambah catatan"
+                          >
+                            📝
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Baris catatan — muncul kalau expand */}
+                      {row._showNotes && (
+                        <tr key={`notes-${i}`} className="bg-indigo-50/30">
+                          <td colSpan={10} className="px-3 pb-2 pt-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-indigo-500 shrink-0">
+                                Catatan tambahan:
+                              </span>
+                              <input
+                                type="text"
+                                value={row.notes}
+                                onChange={(e) =>
+                                  updateRow(i, { notes: e.target.value })
+                                }
+                                placeholder="Tambahkan catatan untuk transaksi ini..."
+                                className="flex-1 text-xs px-2 py-1 border border-indigo-200 rounded bg-white focus:outline-none focus:border-indigo-400"
+                                autoFocus
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
               </tbody>

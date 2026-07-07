@@ -84,7 +84,7 @@ export default function TransactionForm({
 
   const [form, setForm] = useState({
     account_id: prefillSource?.account_id ?? "",
-    to_account_id: "",
+    to_account_id: prefillSource?.to_account_id ?? "",
     category_id: prefillSource?.category_id ?? "",
     project_id: prefillSource?.project_id ?? "",
     type: (prefillSource?.type ?? "expense") as
@@ -225,6 +225,7 @@ export default function TransactionForm({
 
     const payload = {
       account_id: form.account_id,
+      to_account_id: form.to_account_id || undefined,
       category_id: form.category_id || undefined,
       project_id: form.project_id || undefined,
       type: form.type,

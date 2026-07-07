@@ -43,11 +43,31 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
     if not acc:
         raise HTTPException(status_code=404, detail="Rekening tidak ditemukan")
 
-    # update saldo otomatis
     if payload.type == "income":
         acc.balance += payload.amount
     elif payload.type == "expense":
         acc.balance -= payload.amount
+    elif payload.type == "transfer":
+        if not payload.to_account_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Rekening tujuan transfer diperlukan"
+            )
+        if payload.to_account_id == payload.account_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Rekening tujuan transfer tidak boleh sama dengan rekening asal"
+            )
+
+        # kurangi saldo rekening asal
+        acc.balance -= payload.amount
+        # tambah saldo rekening tujuan
+        acc_to = db.query(Account).filter(
+            Account.id == payload.to_account_id
+        ).first()
+        if not acc_to:
+            raise HTTPException(status_code=404, detail="Rekening tujuan tidak ditemukan")
+        acc_to.balance += payload.amount
 
     tx = Transaction(**payload.model_dump())
     db.add(tx)
@@ -61,25 +81,50 @@ def update_transaction(tx_id: UUID, payload: TransactionUpdate, db: Session = De
     if not tx:
         raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
 
-    # kalau amount/type berubah, perlu rollback saldo lama dan apply yang baru
-    old_amount = tx.amount
-    old_type   = tx.type
+    acc = db.query(Account).filter(Account.id == tx.account_id).first()
 
+    # rollback saldo lama
+    if tx.type == "income":
+        acc.balance -= tx.amount
+    elif tx.type == "expense":
+        acc.balance += tx.amount
+    elif tx.type == "transfer":
+        acc.balance += tx.amount
+        if tx.to_account_id:
+            acc_to = db.query(Account).filter(Account.id == tx.to_account_id).first()
+            if acc_to:
+                acc_to.balance -= tx.amount
+
+    # apply perubahan
     for key, val in payload.model_dump(exclude_none=True).items():
         setattr(tx, key, val)
 
-    # rollback saldo lama
-    acc = db.query(Account).filter(Account.id == tx.account_id).first()
-    if old_type == "income":
-        acc.balance -= old_amount
-    elif old_type == "expense":
-        acc.balance += old_amount
+    if tx.type == "transfer":
+        if not tx.to_account_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Rekening tujuan transfer diperlukan"
+            )
+        if tx.to_account_id == tx.account_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Rekening tujuan transfer tidak boleh sama dengan rekening asal"
+            )
+
+    if tx.type != "transfer":
+        tx.to_account_id = None
 
     # apply saldo baru
     if tx.type == "income":
         acc.balance += tx.amount
     elif tx.type == "expense":
         acc.balance -= tx.amount
+    elif tx.type == "transfer":
+        acc.balance -= tx.amount
+        acc_to = db.query(Account).filter(Account.id == tx.to_account_id).first()
+        if not acc_to:
+            raise HTTPException(status_code=404, detail="Rekening tujuan tidak ditemukan")
+        acc_to.balance += tx.amount
 
     db.commit()
     db.refresh(tx)
@@ -91,12 +136,22 @@ def delete_transaction(tx_id: UUID, db: Session = Depends(get_db)):
     if not tx:
         raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
 
-    # rollback saldo
     acc = db.query(Account).filter(Account.id == tx.account_id).first()
-    if tx.type == "income":
-        acc.balance -= tx.amount
-    elif tx.type == "expense":
-        acc.balance += tx.amount
+    if acc:
+        if tx.type == "income":
+            acc.balance -= tx.amount
+        elif tx.type == "expense":
+            acc.balance += tx.amount
+        elif tx.type == "transfer":
+            # kembalikan saldo rekening asal
+            acc.balance += tx.amount
+            # kurangi saldo rekening tujuan
+            if tx.to_account_id:
+                acc_to = db.query(Account).filter(
+                    Account.id == tx.to_account_id
+                ).first()
+                if acc_to:
+                    acc_to.balance -= tx.amount
 
     db.delete(tx)
     db.commit()
